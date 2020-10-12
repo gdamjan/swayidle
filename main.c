@@ -1,5 +1,4 @@
 #define _POSIX_C_SOURCE 200809L
-#define _DEFAULT_SOURCE
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -972,6 +971,24 @@ static int load_config(const char *config_path) {
 	return 0;
 }
 
+int do_daemonize(void) {
+	// don't close stdin, stdout, stderr
+	// just fork and setsid
+	pid_t child;
+
+	child = fork();
+	if (child == -1) {
+		return -1;
+	}
+
+	if (child == 0) {
+		if (setsid() == -1)
+			return -1;
+		return 0;
+	} else {
+		_exit(0);
+	}
+}
 
 int main(int argc, char *argv[]) {
 	swayidle_init();
@@ -1074,7 +1091,7 @@ int main(int argc, char *argv[]) {
 	wl_event_source_check(source);
 
 	if (daemonize) {
-		if (daemon(1, 1) != 0 ) {
+		if (do_daemonize() != 0 ) {
 			swayidle_log_errno(LOG_ERROR, "Failed to daemonize, will exit!");
 			sway_terminate(1);
 		}
