@@ -1,4 +1,5 @@
 #define _POSIX_C_SOURCE 200809L
+#define _DEFAULT_SOURCE
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -67,6 +68,8 @@ enum log_importance {
 };
 
 static enum log_importance verbosity = LOG_INFO;
+
+static bool daemonize = false;
 
 static void swayidle_log(enum log_importance importance, const char *fmt, ...) {
 	if (importance < verbosity) {
@@ -780,13 +783,16 @@ static int parse_idlehint(int argc, char **argv) {
 
 static int parse_args(int argc, char *argv[], char **config_path) {
 	int c;
-	while ((c = getopt(argc, argv, "C:hdwS:")) != -1) {
+	while ((c = getopt(argc, argv, "C:hdfwS:")) != -1) {
 		switch (c) {
 		case 'C':
 			*config_path = strdup(optarg);
 			break;
 		case 'd':
 			verbosity = LOG_DEBUG;
+			break;
+		case 'f':
+			daemonize = true;
 			break;
 		case 'w':
 			state.wait = true;
@@ -1066,6 +1072,13 @@ int main(int argc, char *argv[]) {
 		wl_display_get_fd(state.display), WL_EVENT_READABLE,
 		display_event, NULL);
 	wl_event_source_check(source);
+
+	if (daemonize) {
+		if (daemon(1, 1) != 0 ) {
+			swayidle_log_errno(LOG_ERROR, "Failed to daemonize, will exit!");
+			sway_terminate(1);
+		}
+	}
 
 	while (wl_event_loop_dispatch(state.event_loop, -1) != 1) {
 		// This space intentionally left blank
