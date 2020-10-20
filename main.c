@@ -19,6 +19,7 @@
 #if HAVE_SYSTEMD
 #include <systemd/sd-bus.h>
 #include <systemd/sd-login.h>
+#include <systemd/sd-daemon.h>
 #elif HAVE_ELOGIND
 #include <elogind/sd-bus.h>
 #include <elogind/sd-login.h>
@@ -1078,6 +1079,9 @@ int main(int argc, char *argv[]) {
 		kill(getpid(), SIGUSR1);
 	}
 
+#if HAVE_SYSTEMD
+	sd_notify(0, "READY=1");
+#endif
 	while (wl_event_loop_dispatch(state.event_loop, -1) != 1) {
 		// This space intentionally left blank
 	}
